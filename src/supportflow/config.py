@@ -8,6 +8,11 @@ class Settings:
     timeout_seconds: float = 10.0
        
 def load_settings() -> Settings:
-     base_url = os.environ["SUPPORTFLOW_BASE_URL"].rstrip("/")
+     base_url = os.getenv("SUPPORTFLOW_BASE_URL")
 
-     return Settings(base_url=base_url)
+     if not base_url:
+          raise RuntimeError(
+               "Missing required environment variable: SUPPORTFLOW_BASE_URL"
+          )
+
+     return Settings(base_url=base_url.rstrip("/"))
