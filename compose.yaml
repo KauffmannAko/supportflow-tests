@@ -1,0 +1,14 @@
+services:
+  api-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    image: supportflow-api-tests:local
+
+    environment:
+      SUPPORTFLOW_BASE_URL: ${SUPPORTFLOW_CONTAINER_BASE_URL:-http://host.docker.internal:8000/api}
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
