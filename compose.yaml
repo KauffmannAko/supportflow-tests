@@ -1,14 +1,65 @@
 services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-supportflow}
+      MYSQL_USER: ${DB_USER:?Set DB_USER in .env or the environment}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env or the environment}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env or the environment}
+    volumes:
+      - test-db:/var/lib/mysql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --protocol=TCP
+          --host=127.0.0.1 --user="$${MYSQL_USER}"
+          --database="$${MYSQL_DATABASE}" --execute='SELECT 1' >/dev/null
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 10s
+    # ports:
+    #   - "127.0.0.1:3306:3306"
+
+  api:
+    image: nanaako/supportflow-api:1.0.0
+    working_dir: /app
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env or the environment}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
+      DJANGO_ALLOWED_HOSTS: api,localhost,127.0.0.1
+      DB_NAME: ${DB_NAME:-supportflow}
+      DB_USER: ${DB_USER:?Set DB_USER in .env or the environment}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env or the environment}
+      DB_HOST: db
+      DB_PORT: "3306"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import json, urllib.request;
+          response = urllib.request.urlopen('http://api:8000/api/health/', timeout=3);
+          assert response.status == 200 and json.load(response).get('status') == 'ok'
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 5s
+    # ports:
+    #   - "127.0.0.1:8000:8000"
+
   api-tests:
     build:
       context: .
       dockerfile: Dockerfile
-    
     image: supportflow-api-tests:local
-
     environment:
-      SUPPORTFLOW_BASE_URL: ${SUPPORTFLOW_CONTAINER_BASE_URL:-http://host.docker.internal:8000/api}
+      SUPPORTFLOW_BASE_URL: http://api:8000/api
 
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
+volumes:
+  test-db:
