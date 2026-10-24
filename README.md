@@ -60,31 +60,5 @@ printing secrets; `make build` builds the test image; `make shell` opens its
 shell; `make clean` stops and removes the stack and its database data. All
 commands use the same default Compose project.
 
-## CI and troubleshooting
+## CI
 
-Jenkins and GitHub Actions use the same `make test` command on an AMD64 runner
-with Docker access. Inject `DJANGO_SECRET_KEY`, `DB_USER`, `DB_PASSWORD`, and
-`MYSQL_ROOT_PASSWORD` through CI credentials/secrets; no `.env` file is needed.
-Environment variables override `.env`. Test failures fail the job. The runner
-preserves pytest's exit code; Make returns its own nonzero status for failed
-recipes. Set a unique `COMPOSE_PROJECT_NAME` per concurrent CI job and use the
-same value for testing and cleanup. Run `make clean` in a Jenkins `post { always }`
-step or a GitHub Actions step with `if: always()`; cleanup is explicit.
-
-- Docker connection failure: start Docker and check the active Docker context
-  and runner access to the daemon.
-- Missing credentials: fill the blank `.env` values or inject CI variables.
-- Database or migration failure: inspect the service logs printed on failure;
-  check credentials and use a non-root database user.
-- API timeout or HTTP 400: check startup logs. Compose includes `api` in allowed
-  hosts, and both tests and readiness checks use that hostname.
-- Platform error: use AMD64 or configure AMD64 emulation.
-
-Failures print service status and recent logs without stopping the stack.
-Use `docker compose logs db api` to inspect it, then `make clean` when finished.
-
-Runner checks without Docker:
-
-```sh
-python3 scripts/check-integration-runner.py
-```
